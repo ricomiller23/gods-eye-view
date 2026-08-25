@@ -3,6 +3,47 @@
  * Route: /api/*
  */
 
+const KNOT_TO_MPS = 0.514444;
+const FOOT_TO_M = 0.3048;
+const FPM_TO_MPS = 0.00508;
+
+function normalizeAdsbLolAircraftState(ac, nowSeconds) {
+  const hex = String(ac?.hex || '').trim().toLowerCase();
+  const lat = Number(ac?.lat);
+  const lon = Number(ac?.lon);
+  if (!hex || !Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
+  const seenPos = Number(ac?.seen_pos) || Number(ac?.seen) || 0;
+  const seen = Number(ac?.seen) || seenPos;
+  const onGround = ac?.alt_baro === 'ground';
+  const baroFeet = onGround ? null : Number(ac?.alt_baro);
+  const geomFeet = Number(ac?.alt_geom);
+  const gsKnots = Number(ac?.gs);
+  const baroRateFpm = Number(ac?.baro_rate) || Number(ac?.geom_rate);
+  const track = Number(ac?.track);
+
+  return [
+    hex,
+    String(ac?.flight || ac?.r || '').trim() || null,
+    null,
+    Math.max(0, nowSeconds - seenPos),
+    Math.max(0, nowSeconds - seen),
+    lon,
+    lat,
+    Number.isFinite(baroFeet) ? baroFeet * FOOT_TO_M : null,
+    onGround,
+    Number.isFinite(gsKnots) ? gsKnots * KNOT_TO_MPS : null,
+    Number.isFinite(track) ? track : null,
+    Number.isFinite(baroRateFpm) ? baroRateFpm * FPM_TO_MPS : null,
+    null,
+    Number.isFinite(geomFeet) ? geomFeet * FOOT_TO_M : null,
+    ac?.squawk || null,
+    ac?.spi === 1,
+    0,
+    0,
+  ];
+}
+
 export default async function handler(req, res) {
   // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -17,21 +58,108 @@ export default async function handler(req, res) {
   const pathname = url.pathname.replace(/^\/api/, '');
 
   try {
-    // 1. OpenSky Aircraft State Vectors
+    // 1. Live Aircraft State Vectors (Multi-Feed Airspace Aggregator)
     if (pathname.startsWith('/opensky')) {
+      const latParam = url.searchParams.get('lat');
+      const lonParam = url.searchParams.get('lon');
+      const lat = Number(latParam);
+      const lon = Number(lonParam);
+      const hasCoords = Number.isFinite(lat) && Number.isFinite(lon);
+
+      let openSkyData = null;
       try {
         const upstream = await fetch('https://opensky-network.org/api/states/all?extended=1', {
           headers: { 'User-Agent': 'GodsEyeView/1.0' },
-          signal: AbortSignal.timeout(7000),
+          signal: AbortSignal.timeout(6000),
         });
         if (upstream.ok) {
-          const data = await upstream.json();
-          return res.status(200).json(data);
+          openSkyData = await upstream.json();
         }
       } catch (e) {
         console.warn('[Vercel API Proxy] OpenSky fetch failed:', e.message);
       }
-      return res.status(200).json({ time: Math.floor(Date.now() / 1000), states: [] });
+
+      if (openSkyData && Array.isArray(openSkyData.states) && openSkyData.states.length > 100) {
+        return res.status(200).json(openSkyData);
+      }
+
+      // Fetch live commercial, general aviation & military airspace traffic from adsb.lol
+      const nowSeconds = Math.floor(Date.now() / 1000);
+      const aircraftMap = new Map();
+
+      // Parallel requests to regional point, LADD, PIA, and Military feeds
+      const fetchPromises = [];
+      if (hasCoords) {
+        // Query 250 NM radius around target location (e.g. Phoenix lat=33.4484, lon=-112.0740)
+        fetchPromises.push(
+          fetch(`https://api.adsb.lol/v2/lat/${lat.toFixed(4)}/lon/${lon.toFixed(4)}/dist/250`, {
+            headers: { Accept: 'application/json', 'User-Agent': 'gods-eye-view-proxy/1.0' },
+            signal: AbortSignal.timeout(7000),
+          })
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null)
+        );
+        fetchPromises.push(
+          fetch(`https://api.adsb.lol/v2/point/${lat.toFixed(4)}/${lon.toFixed(4)}/250`, {
+            headers: { Accept: 'application/json', 'User-Agent': 'gods-eye-view-proxy/1.0' },
+            signal: AbortSignal.timeout(7000),
+          })
+            .then((r) => (r.ok ? r.json() : null))
+            .catch(() => null)
+        );
+      }
+
+      // Query global feeds (LADD, PIA, Military)
+      fetchPromises.push(
+        fetch('https://api.adsb.lol/v2/ladd', {
+          headers: { Accept: 'application/json', 'User-Agent': 'gods-eye-view-proxy/1.0' },
+          signal: AbortSignal.timeout(7000),
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null)
+      );
+      fetchPromises.push(
+        fetch('https://api.adsb.lol/v2/pia', {
+          headers: { Accept: 'application/json', 'User-Agent': 'gods-eye-view-proxy/1.0' },
+          signal: AbortSignal.timeout(7000),
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null)
+      );
+      fetchPromises.push(
+        fetch('https://api.adsb.lol/v2/mil', {
+          headers: { Accept: 'application/json', 'User-Agent': 'gods-eye-view-proxy/1.0' },
+          signal: AbortSignal.timeout(7000),
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null)
+      );
+
+      const results = await Promise.all(fetchPromises);
+      for (const payload of results) {
+        if (payload && Array.isArray(payload.ac)) {
+          for (const ac of payload.ac) {
+            const state = normalizeAdsbLolAircraftState(ac, nowSeconds);
+            if (state && !aircraftMap.has(state[0])) {
+              aircraftMap.set(state[0], state);
+            }
+          }
+        }
+      }
+
+      // Merge any states returned by OpenSky if available
+      if (openSkyData && Array.isArray(openSkyData.states)) {
+        for (const st of openSkyData.states) {
+          if (Array.isArray(st) && st[0] && !aircraftMap.has(st[0])) {
+            aircraftMap.set(st[0], st);
+          }
+        }
+      }
+
+      const states = Array.from(aircraftMap.values());
+      res.setHeader('X-Flight-Source', 'adsb.lol');
+      res.setHeader('X-Flight-Count', String(states.length));
+      return res.status(200).json({ time: nowSeconds, states });
     }
 
     // 2. CelesTrak Satellite Orbits (TLE Format)
