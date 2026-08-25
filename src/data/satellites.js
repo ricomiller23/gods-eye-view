@@ -2179,7 +2179,7 @@ const satellitesLayer = {
       count: _count,
       lastUpdate: _lastUpdate,
       stale: false,
-      status: _lastError === 'CelesTrak unreachable'
+      status: (_lastError === 'CelesTrak unreachable' && _count === 0)
         ? 'unavailable'
         : (_lastError ? 'degraded' : 'nominal'),
       error: _lastError,
