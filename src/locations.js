@@ -1,5 +1,6 @@
 import * as Cesium from 'cesium';
 import { viewportBias, placesNearViewRecovery } from './annotations/annotationResolver.js';
+import { findWorldCity, geocodeViaNominatim } from './data/worldCities.js';
 
 /**
  * Points of Interest per city.
@@ -348,38 +349,71 @@ export const CANCELLED_SEARCH = Object.freeze({ cancelled: true });
  */
 export async function searchAndFlyTo(viewer, query, options = {}) {
   const apiKey = window.__GOOGLE_MAPS_API_KEY__ || import.meta.env.GOOGLE_MAPS_API_KEY;
-  if (!apiKey) throw new Error('No Google Maps API key available for geocoding');
 
   const beforeFly = typeof options.beforeFly === 'function' ? options.beforeFly : null;
   const mayFly = () => beforeFly === null || beforeFly() !== false;
 
-  // Viewport-biased geocode — the same bias annotationResolver's geocodePlace uses:
-  // "Sixth Street" spoken over Austin must prefer the Sixth Street on screen, not a
-  // same-named road in another city (or the wrong end of town — the W 6th vs E 6th bug).
-  let url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${apiKey}`;
-  const bias = viewportBias(viewer);
-  if (bias) url += `&bounds=${bias}`;
-  const response = await fetch(url);
-  const data = await response.json();
+  let lat = null;
+  let lng = null;
+  let label = null;
+  let types = [];
+  let viewport = null;
 
-  const result = (data.status === 'OK' && data.results?.length) ? data.results[0] : null;
-  let lat = result?.geometry.location.lat;
-  let lng = result?.geometry.location.lng;
-  let label = result ? result.formatted_address : null;
-  let types = result?.types || [];
-  let viewport = result ? (result.geometry.bounds || result.geometry.viewport) : null;
+  // Stage 1: Google Geocoding API if key is available
+  if (apiKey) {
+    try {
+      let url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(query)}&key=${apiKey}`;
+      const bias = viewportBias(viewer);
+      if (bias) url += `&bounds=${bias}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      if (data.status === 'OK' && data.results?.length) {
+        const result = data.results[0];
+        lat = result.geometry.location.lat;
+        lng = result.geometry.location.lng;
+        label = result.formatted_address;
+        types = result.types || [];
+        viewport = result.geometry.bounds || result.geometry.viewport;
 
-  // Places-near-view recovery (annotationResolver's twin): a missed geocode, or one
-  // that landed implausibly far from the view centre, snaps back to a view-biased
-  // Places hit within the trust bound — "the Capitol" means the one on screen.
-  const recovered = await placesNearViewRecovery(viewer, query, result ? { lat, lon: lng } : null);
-  if (recovered) {
-    lat = recovered.lat;
-    lng = recovered.lon;
-    label = recovered.label || label || query;
-    types = recovered.types || [];
-    viewport = placesViewportToBounds(recovered.viewport) || viewport;
-  } else if (!result) {
+        const recovered = await placesNearViewRecovery(viewer, query, { lat, lon: lng });
+        if (recovered) {
+          lat = recovered.lat;
+          lng = recovered.lon;
+          label = recovered.label || label || query;
+          types = recovered.types || [];
+          viewport = placesViewportToBounds(recovered.viewport) || viewport;
+        }
+      }
+    } catch (e) {
+      console.warn('[Google Geocoder] Fetch error:', e?.message || e);
+    }
+  }
+
+  // Stage 2: Keyless OpenStreetMap Nominatim Geocoder
+  if (lat == null || lng == null) {
+    const nomHit = await geocodeViaNominatim(query);
+    if (nomHit) {
+      lat = nomHit.lat;
+      lng = nomHit.lng;
+      label = nomHit.label;
+      types = nomHit.types || ['locality'];
+      viewport = nomHit.viewport;
+    }
+  }
+
+  // Stage 3: Built-in World Cities Gazetteer with Fuzzy Search (e.g. Mosow -> Moscow, Scottsdale, etc.)
+  if (lat == null || lng == null) {
+    const cityHit = findWorldCity(query);
+    if (cityHit) {
+      lat = cityHit.lat;
+      lng = cityHit.lon;
+      label = cityHit.label || cityHit.name;
+      types = ['locality'];
+      viewport = cityHit.bounds || null;
+    }
+  }
+
+  if (lat == null || lng == null) {
     return null;
   }
 
