@@ -35,6 +35,22 @@
     <span class="indicator-value" id="active-style-name">NORMAL</span>
   </div>
 
+  <!-- Quick Sensor Optics Pod -->
+  <div id="optics-switcher-pod" class="optics-switcher-pod" role="toolbar" aria-label="Sensor optics modes">
+    <button class="optics-pod-btn active" data-style="normal" type="button" title="Electro-Optical (Normal) [1]">
+      <span class="optics-code">EO</span>
+    </button>
+    <button class="optics-pod-btn" data-style="thermal" type="button" title="FLIR Thermal Infrared [4]">
+      <span class="optics-code">FLIR</span>
+    </button>
+    <button class="optics-pod-btn" data-style="surveillance" type="button" title="Night Vision NVG [3]">
+      <span class="optics-code">NVG</span>
+    </button>
+    <button class="optics-pod-btn" data-style="retro" type="button" title="CRT Phosphor Monitor [2]">
+      <span class="optics-code">CRT</span>
+    </button>
+  </div>
+
   <!-- Top-center camera and share actions -->
   <nav id="top-center-actions" aria-label="Globe actions">
     <button id="clear-selected-layers" type="button" aria-label="Clear selected data layers" title="Turn off all selected data layers">
@@ -45,6 +61,9 @@
     </button>
     <button id="reset-globe-view" type="button" aria-label="Reset to full globe view" title="Reset camera and return to full globe view">
       <span class="material-symbols-outlined" aria-hidden="true">public</span>
+    </button>
+    <button id="hud-clean-toggle" type="button" aria-label="Toggle clean globe view" title="Toggle Clean View (V or H)">
+      <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
     </button>
   </nav>
   <div id="global-loading-status" role="status" aria-live="polite" aria-atomic="true" hidden>
@@ -479,6 +498,9 @@
 
   <!-- Unified bottom command dock: locations, voice (injected at runtime), visual presets -->
   <div id="command-dock" aria-label="Navigation, voice, and visual preset controls">
+    <button id="command-dock-slide-toggle" class="dock-slide-toggle-btn" type="button" aria-label="Hide command dock" title="Slide dock down (\)">
+      <span class="material-symbols-outlined">expand_more</span>
+    </button>
   <!-- Control panel -->
   <div id="control-panel" class="panel-collapsible collapsed">
     <div class="panel-glow"></div>
@@ -572,6 +594,30 @@
     </div>
   </div>
   </div>
+
+  <button id="dock-pull-tab" class="dock-pull-tab" type="button" aria-label="Show command dock" title="Slide Command Dock up (\)">
+    <span class="material-symbols-outlined">expand_less</span>
+    <span>COMMAND DOCK</span>
+  </button>
+
+  <!-- Left Command Rail Tabs & Slide Toggle -->
+  <aside id="left-rail-tabs" class="left-rail-tabs" aria-label="Command rail tabs">
+    <button id="left-rail-toggle-btn" class="rail-tab-btn rail-toggle-btn" type="button" aria-label="Toggle command rail" title="Slide command rail in/out ([)">
+      <span class="rail-tab-icon material-symbols-outlined" id="left-rail-toggle-icon">chevron_left</span>
+    </button>
+    <button id="tab-btn-data" class="rail-tab-btn active" type="button" data-target-panel="data-panel" aria-label="Data Layers" title="Data Layers (✈️)">
+      <span class="rail-tab-icon material-symbols-outlined">layers</span>
+      <span class="rail-tab-label">LAYERS</span>
+    </button>
+    <button id="tab-btn-cctv" class="rail-tab-btn" type="button" data-target-panel="cctv-panel" aria-label="Live CCTV" title="Live CCTV Feeds (📹)">
+      <span class="rail-tab-icon material-symbols-outlined">videocam</span>
+      <span class="rail-tab-label">CCTV</span>
+    </button>
+    <button id="tab-btn-scenes" class="rail-tab-btn" type="button" data-target-panel="scene-panel" aria-label="Scene Director" title="Direct Flight Paths & Scenes (🎬)">
+      <span class="rail-tab-icon material-symbols-outlined">movie</span>
+      <span class="rail-tab-label">SCENES</span>
+    </button>
+  </aside>
 
   <div id="left-panel-stack">
   <!-- Data Layer Toggle Panel -->
@@ -690,6 +736,7 @@
         <div class="panel-header">
           <span class="panel-title">CONTEXT</span>
           <span class="panel-divider"></span>
+          <button id="right-rail-toggle-btn" class="rail-slide-toggle-right" type="button" aria-label="Toggle context rail" title="Slide Context Rail in/out (])"><span class="material-symbols-outlined">chevron_right</span></button>
           <div id="context-radio-dock" class="context-radio-dock">
             <button id="context-radio-toggle-btn" class="context-radio-toggle" type="button" aria-expanded="false" aria-controls="context-radio-mini" aria-label="Open compact Radio controls" title="Open compact Radio controls">
               <span class="material-symbols-outlined" aria-hidden="true">radio</span>
@@ -825,6 +872,14 @@
         </section>
       </div>
     </div>
+  </aside>
+
+  <!-- Right Context Rail Tab Trigger (shown when rail is slid out) -->
+  <aside id="right-rail-tabs" class="right-rail-tabs" aria-label="Context rail tab">
+    <button id="right-rail-open-btn" class="rail-tab-btn" type="button" aria-label="Open Intel Context" title="Open Intel Context (])">
+      <span class="rail-tab-icon material-symbols-outlined">radar</span>
+      <span class="rail-tab-label">INTEL</span>
+    </button>
   </aside>
 
   <div id="scene-runtime"></div>

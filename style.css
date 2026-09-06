@@ -20,7 +20,7 @@
   --btn-radius: 10px;
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-  --left-stack-x: 52px;
+  --left-stack-x: 68px;
   --right-rail-x: 52px;
   --left-stack-top: 26vh;
   --left-stack-gap: 72px;
@@ -9160,4 +9160,378 @@ body.scene-playback-mode #first-run-launcher {
   .first-run-arrow { transition: none; }
   /* Scrolling a tile into view must not animate either. */
   .first-run-choices { scroll-behavior: auto; }
+}
+
+/* ── Collapsible Command Rails & Sliding Panels ──────────────── */
+#left-panel-stack {
+  transition: top var(--transition-fast), bottom var(--transition-fast), transform 320ms cubic-bezier(0.16, 1, 0.3, 1), opacity 240ms ease !important;
+}
+
+#left-panel-stack.rail-slid-out {
+  transform: translateX(calc(-100% - 100px)) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Left vertical rail command tab strip */
+#left-rail-tabs {
+  position: fixed;
+  top: var(--left-stack-safe-top, var(--left-stack-top));
+  left: 10px;
+  z-index: 105;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 4px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+    0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1), opacity 240ms ease, border-color var(--transition-fast);
+  pointer-events: auto;
+}
+
+#left-rail-tabs:hover {
+  border-color: var(--glass-border-hover);
+}
+
+.rail-tab-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 4px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+  outline: none;
+}
+
+.rail-tab-btn:hover {
+  background: rgba(0, 212, 255, 0.1);
+  border-color: rgba(0, 212, 255, 0.35);
+  color: var(--accent);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.2);
+  transform: scale(1.05);
+}
+
+.rail-tab-btn:active {
+  transform: scale(0.96);
+}
+
+.rail-tab-btn.active {
+  background: rgba(0, 212, 255, 0.18);
+  border-color: rgba(0, 212, 255, 0.6);
+  color: #fff;
+  box-shadow: 0 0 16px rgba(0, 212, 255, 0.35), inset 0 0 8px rgba(0, 212, 255, 0.2);
+}
+
+.rail-tab-btn .rail-tab-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.rail-tab-btn .rail-tab-label {
+  font-family: var(--font-mono);
+  font-size: 7.5px;
+  letter-spacing: 0.5px;
+  margin-top: 3px;
+  font-weight: 600;
+  color: inherit;
+}
+
+.rail-toggle-btn {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 4px;
+  height: 32px;
+}
+
+.rail-toggle-btn:hover {
+  background: rgba(0, 212, 255, 0.14);
+}
+
+/* Right rail slide out */
+#right-context-rail {
+  transition: top var(--transition-fast), max-height var(--transition-fast), opacity var(--transition-smooth), visibility var(--transition-smooth);
+}
+
+#right-context-rail.rail-slid-out {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+#right-context-rail.rail-slid-out > #global-context-panel {
+  transform: translateX(calc(100% + 100px)) !important;
+  opacity: 0 !important;
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1), opacity 240ms ease;
+}
+
+.rail-slide-toggle-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  margin-right: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  outline: none;
+}
+
+.rail-slide-toggle-right:hover {
+  background: rgba(0, 212, 255, 0.14);
+  border-color: rgba(0, 212, 255, 0.4);
+  color: var(--accent);
+}
+
+.rail-slide-toggle-right .material-symbols-outlined {
+  font-size: 16px;
+}
+
+/* Right rail tab trigger */
+#right-rail-tabs {
+  position: fixed;
+  top: var(--right-stack-safe-top, 26vh);
+  right: 10px;
+  z-index: 105;
+  display: none;
+  padding: 6px 4px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  pointer-events: auto;
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1), opacity 240ms ease;
+}
+
+#right-context-rail.rail-slid-out ~ #right-rail-tabs,
+#right-rail-tabs.rail-slid-out {
+  display: flex;
+}
+
+/* Bottom Command Dock slide transitions */
+#command-dock.dock-slid-down {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+#command-dock.dock-slid-down > :not(#dock-pull-tab) {
+  opacity: 0 !important;
+  transition: opacity 240ms ease;
+}
+
+.dock-slide-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  margin: 0 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  outline: none;
+  flex: 0 0 auto;
+}
+
+.dock-slide-toggle-btn:hover {
+  background: rgba(0, 212, 255, 0.12);
+  border-color: rgba(0, 212, 255, 0.35);
+  color: var(--accent);
+}
+
+.dock-slide-toggle-btn .material-symbols-outlined {
+  font-size: 16px;
+}
+
+/* Floating pull tab when dock is hidden */
+#dock-pull-tab {
+  position: fixed;
+  bottom: 8px;
+  left: 50%;
+  z-index: 144;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  background: rgba(3, 10, 18, 0.82);
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  border-radius: 20px;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  font-weight: 600;
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 12px rgba(0, 212, 255, 0.2);
+  cursor: pointer;
+  transform: translateX(-50%) translateY(40px);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 280ms cubic-bezier(0.16, 1, 0.3, 1), opacity 200ms ease, box-shadow var(--transition-fast), background var(--transition-fast);
+  outline: none;
+}
+
+#dock-pull-tab.visible {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#dock-pull-tab:hover {
+  background: rgba(3, 10, 18, 0.95);
+  border-color: rgba(0, 212, 255, 0.65);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.7), 0 0 18px rgba(0, 212, 255, 0.4);
+  color: #fff;
+}
+
+#dock-pull-tab .material-symbols-outlined {
+  font-size: 16px;
+}
+
+/* ── Quick Sensor Optics Pod ────────────────────────────────── */
+#optics-switcher-pod {
+  position: fixed;
+  top: 72px;
+  right: 36px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 5px;
+  background: rgba(3, 10, 18, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  pointer-events: auto;
+  transition: opacity var(--transition-smooth), visibility var(--transition-smooth);
+}
+
+.optics-pod-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 9px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  outline: none;
+}
+
+.optics-pod-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.optics-pod-btn.active {
+  background: rgba(0, 212, 255, 0.18);
+  border-color: rgba(0, 212, 255, 0.45);
+  color: var(--accent);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+/* FLIR thermal pod styling when active */
+.optics-pod-btn[data-style='thermal'].active {
+  background: rgba(255, 120, 0, 0.2);
+  border-color: rgba(255, 120, 0, 0.5);
+  color: #ff9d42;
+  box-shadow: 0 0 10px rgba(255, 120, 0, 0.35);
+}
+
+/* NVG night vision pod styling when active */
+.optics-pod-btn[data-style='surveillance'].active {
+  background: rgba(0, 255, 100, 0.18);
+  border-color: rgba(0, 255, 100, 0.5);
+  color: #00ff73;
+  box-shadow: 0 0 10px rgba(0, 255, 100, 0.35);
+}
+
+/* Clean view / recording mode suppression for new elements */
+body.ui-clean-view #left-rail-tabs,
+body.ui-clean-view #right-rail-tabs,
+body.ui-clean-view #dock-pull-tab,
+body.ui-clean-view #optics-switcher-pod,
+body.recording-mode #left-rail-tabs,
+body.recording-mode #right-rail-tabs,
+body.recording-mode #dock-pull-tab,
+body.recording-mode #optics-switcher-pod {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+/* Mobile responsive optimizations for sliding rails & pod */
+@media (max-width: 768px) {
+  #left-rail-tabs {
+    top: 80px;
+    left: 6px;
+    padding: 4px 2px;
+    gap: 4px;
+  }
+
+  .rail-tab-btn {
+    width: 38px;
+    height: 38px;
+    padding: 2px;
+  }
+
+  .rail-tab-btn .rail-tab-icon {
+    font-size: 17px;
+  }
+
+  .rail-tab-btn .rail-tab-label {
+    display: none;
+  }
+
+  #optics-switcher-pod {
+    top: 60px;
+    right: 12px;
+    padding: 2px 4px;
+  }
+
+  .optics-pod-btn {
+    padding: 3px 6px;
+    font-size: 9px;
+  }
+
+  #dock-pull-tab {
+    font-size: 9px;
+    padding: 4px 10px;
+  }
 }

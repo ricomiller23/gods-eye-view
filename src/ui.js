@@ -2628,6 +2628,8 @@ export class StyleManager {
     this._initClearSelectedLayersButton();
     this._initResetGlobeButton();
     this._initHUDToggle();
+    this._initSlidingCommandRails();
+    this._initOpticsSwitcherPod();
     this._initModels3dToggle();
     this._applyGlobalPostDefaults();
     this._initOrbit();
@@ -3370,6 +3372,15 @@ export class StyleManager {
       }
       if (e.key.toLowerCase() === 'c') {
         this._toggleCctvEnabled();
+      }
+      if (e.key === '[') {
+        this._setLeftRailSlidOut?.(!this._leftRailSlidOut);
+      }
+      if (e.key === ']') {
+        this._setRightRailSlidOut?.(!this._rightRailSlidOut);
+      }
+      if (e.key === '\\') {
+        this._setDockSlidDown?.(!this._dockSlidDown);
       }
     };
     document.addEventListener('keydown', this._globalKeydownHandler);
@@ -4880,6 +4891,7 @@ export class StyleManager {
         await this._restoreContextSession({ notificationToken, signal });
         return isCurrent();
       }
+      if (this._rightRailSlidOut) this._setRightRailSlidOut?.(false);
       // A cross-mode switch dismantles the prior mode BEFORE the new one is
       // committed. If the caller aborts in that window the switch never lands,
       // and the resting state is Context OFF — reported as such by
@@ -7747,6 +7759,7 @@ export class StyleManager {
     this._scheduleLeftPanelLayout({
       reconsiderAutoCollapse: this._leftPanelStack?.contains(panelEl) === true,
     });
+    this._syncLeftRailTabHighlights?.();
     if (syncShare) this.shareLinkManager?.onPanelStateChange?.();
   }
 
@@ -7762,6 +7775,10 @@ export class StyleManager {
     document.body.classList.toggle('ui-clean-view', shouldEnable);
     if (this._cleanViewBtn) {
       this._cleanViewBtn.classList.toggle('active', shouldEnable);
+    }
+    const hudCleanBtn = document.getElementById('hud-clean-toggle');
+    if (hudCleanBtn) {
+      hudCleanBtn.classList.toggle('active', shouldEnable);
     }
     this._scheduleLeftPanelLayout();
   }
@@ -9015,6 +9032,9 @@ export class StyleManager {
     document.querySelectorAll('.style-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.style === styleName);
     });
+    document.querySelectorAll('.optics-pod-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.style === styleName);
+    });
 
     // Update style indicator
     const displayNames = { surveillance: 'NVG', thermal: 'FLIR', retro: 'CRT' };
@@ -9596,6 +9616,139 @@ export class StyleManager {
       this.orbitController.stop();
       this._orbitIndicator.classList.remove('active');
     }
+  }
+
+  /**
+   * Initializes sliding command tabs and rails for left panel stack,
+   * right context rail, and bottom command dock.
+   */
+  _initSlidingCommandRails() {
+    this._leftRailSlidOut = false;
+    this._rightRailSlidOut = false;
+    this._dockSlidDown = false;
+
+    // Left Rail toggle button & tabs
+    const leftToggleBtn = document.getElementById('left-rail-toggle-btn');
+    const leftToggleIcon = document.getElementById('left-rail-toggle-icon');
+    const leftStack = this._leftPanelStack;
+    const leftRailTabs = document.getElementById('left-rail-tabs');
+
+    this._setLeftRailSlidOut = (slidOut) => {
+      this._leftRailSlidOut = Boolean(slidOut);
+      if (leftStack) leftStack.classList.toggle('rail-slid-out', this._leftRailSlidOut);
+      if (leftRailTabs) leftRailTabs.classList.toggle('rail-slid-out', this._leftRailSlidOut);
+      if (leftToggleIcon) leftToggleIcon.textContent = this._leftRailSlidOut ? 'chevron_right' : 'chevron_left';
+      if (leftToggleBtn) {
+        leftToggleBtn.title = this._leftRailSlidOut ? 'Open command rail ([)' : 'Slide command rail in/out ([)';
+        leftToggleBtn.setAttribute('aria-expanded', String(!this._leftRailSlidOut));
+      }
+      this._syncLeftRailTabHighlights();
+    };
+
+    leftToggleBtn?.addEventListener('click', () => {
+      this._setLeftRailSlidOut(!this._leftRailSlidOut);
+    });
+
+    // Left rail tab buttons (LAYERS, CCTV, SCENES)
+    document.querySelectorAll('#left-rail-tabs .rail-tab-btn[data-target-panel]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const targetPanelId = btn.dataset.targetPanel;
+        if (!targetPanelId) return;
+        const panelEl = document.getElementById(targetPanelId);
+        const isExpanded = panelEl && !panelEl.classList.contains('collapsed');
+
+        if (this._leftRailSlidOut) {
+          this._setLeftRailSlidOut(false);
+          this.setPanelCollapsed(targetPanelId, false, { explicit: true });
+        } else if (isExpanded) {
+          // If already open, clicking tab slides the rail out to free visual room
+          this._setLeftRailSlidOut(true);
+        } else {
+          this.setPanelCollapsed(targetPanelId, false, { explicit: true });
+        }
+        this._syncLeftRailTabHighlights();
+      });
+    });
+
+    this._syncLeftRailTabHighlights = () => {
+      const dataPanel = document.getElementById('data-panel');
+      const cctvPanel = document.getElementById('cctv-panel');
+      const scenePanel = document.getElementById('scene-panel');
+
+      const isData = dataPanel && !dataPanel.classList.contains('collapsed') && !this._leftRailSlidOut;
+      const isCctv = cctvPanel && !cctvPanel.classList.contains('collapsed') && !this._leftRailSlidOut;
+      const isScene = scenePanel && !scenePanel.classList.contains('collapsed') && !this._leftRailSlidOut;
+
+      document.getElementById('tab-btn-data')?.classList.toggle('active', Boolean(isData));
+      document.getElementById('tab-btn-cctv')?.classList.toggle('active', Boolean(isCctv));
+      document.getElementById('tab-btn-scenes')?.classList.toggle('active', Boolean(isScene));
+    };
+
+    // Right Rail toggle button & tab
+    const rightToggleBtn = document.getElementById('right-rail-toggle-btn');
+    const rightOpenBtn = document.getElementById('right-rail-open-btn');
+    const rightRail = document.getElementById('right-context-rail');
+    const rightRailTabs = document.getElementById('right-rail-tabs');
+
+    this._setRightRailSlidOut = (slidOut) => {
+      this._rightRailSlidOut = Boolean(slidOut);
+      if (rightRail) rightRail.classList.toggle('rail-slid-out', this._rightRailSlidOut);
+      if (rightRailTabs) rightRailTabs.classList.toggle('rail-slid-out', this._rightRailSlidOut);
+      if (rightToggleBtn) {
+        rightToggleBtn.title = this._rightRailSlidOut ? 'Open context rail (])' : 'Slide context rail in/out (])';
+        rightToggleBtn.setAttribute('aria-expanded', String(!this._rightRailSlidOut));
+      }
+    };
+
+    rightToggleBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this._setRightRailSlidOut(!this._rightRailSlidOut);
+    });
+    rightOpenBtn?.addEventListener('click', () => {
+      this._setRightRailSlidOut(false);
+      this.setPanelCollapsed('global-context-panel', false, { explicit: true });
+    });
+
+    // Bottom Command Dock slide toggle & pull tab
+    const dockSlideToggle = document.getElementById('command-dock-slide-toggle');
+    const dockPullTab = document.getElementById('dock-pull-tab');
+    const commandDock = document.getElementById('command-dock');
+
+    this._setDockSlidDown = (slidDown) => {
+      this._dockSlidDown = Boolean(slidDown);
+      if (commandDock) commandDock.classList.toggle('dock-slid-down', this._dockSlidDown);
+      if (dockPullTab) dockPullTab.classList.toggle('visible', this._dockSlidDown);
+    };
+
+    dockSlideToggle?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this._setDockSlidDown(true);
+    });
+
+    dockPullTab?.addEventListener('click', () => {
+      this._setDockSlidDown(false);
+    });
+
+    // Master HUD Clean View button in top-center actions
+    const hudCleanToggle = document.getElementById('hud-clean-toggle');
+    hudCleanToggle?.addEventListener('click', () => {
+      this.toggleCleanView();
+    });
+
+    this._syncLeftRailTabHighlights();
+  }
+
+  /**
+   * Initializes the quick-access Sensor Optics Pod (EO, FLIR, NVG, CRT).
+   */
+  _initOpticsSwitcherPod() {
+    const podButtons = document.querySelectorAll('.optics-pod-btn');
+    podButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const style = btn.dataset.style;
+        if (style) this.setStyle(style);
+      });
+    });
   }
 
   /** Wire the persistent reset control to the same route used by voice. */
