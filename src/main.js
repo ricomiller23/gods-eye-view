@@ -326,11 +326,50 @@ async function init() {
     };
     window.__godsEyeView.voiceCommands = initGevVoiceCommands({ viewer, styleManager, dataManager, sceneDirector, annotations });
 
+    // Active deployment freshness check
+    initDeploymentUpdateCheck();
+
   } catch (error) {
-    console.error("God's Eye View initialization failed:", error);
+    console.error("Initialization failed:", error);
     loaderStatus.textContent = `Error: ${describeError(error)}`;
     loaderStatus.style.color = '#ff4444';
   }
+}
+
+/**
+ * Periodically checks for new web deployments and reloads clean on mismatch.
+ */
+function initDeploymentUpdateCheck() {
+  if (typeof window === 'undefined' || !window.fetch) return;
+  let lastCheck = Date.now();
+  let currentScriptSrc = '';
+  try {
+    const mainScript = document.querySelector('script[src*="/assets/index-"]') || document.querySelector('script[type="module"]');
+    currentScriptSrc = mainScript?.getAttribute('src') || '';
+  } catch {}
+
+  const checkVersion = async () => {
+    const now = Date.now();
+    if (now - lastCheck < 60000) return;
+    lastCheck = now;
+    try {
+      const res = await fetch(`/?_fresh=${now}`, { cache: 'no-store', headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' } });
+      if (!res.ok) return;
+      const html = await res.text();
+      const match = html.match(/src=["'](\/assets\/index-[^"']+\.js)["']/);
+      if (match && currentScriptSrc && match[1] !== currentScriptSrc) {
+        console.warn('[PROJECT CHARLIE TUNA] Detected new deployment version. Refreshing...');
+        window.location.reload();
+      }
+    } catch {
+      // Background check error ignored
+    }
+  };
+
+  window.addEventListener('focus', checkVersion);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) checkVersion();
+  });
 }
 
 init();
