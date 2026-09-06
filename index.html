@@ -894,8 +894,12 @@
     </div>
   </aside>
 
-  <!-- Right Context Rail Tab Trigger (shown when rail is slid out) -->
+  <!-- Right Context Rail Tab Trigger -->
   <aside id="right-rail-tabs" class="right-rail-tabs" aria-label="Context rail tab">
+    <button id="right-rail-display-btn" class="rail-tab-btn" type="button" aria-label="Display Options" title="Display Options">
+      <span class="rail-tab-icon material-symbols-outlined">tune</span>
+      <span class="rail-tab-label">DISPLAY</span>
+    </button>
     <button id="right-rail-open-btn" class="rail-tab-btn" type="button" aria-label="Open Intel Context" title="Open Intel Context (])">
       <span class="rail-tab-icon material-symbols-outlined">radar</span>
       <span class="rail-tab-label">INTEL</span>
@@ -904,11 +908,8 @@
 
   <div id="scene-runtime"></div>
 
-  <!-- Explicit mission choice on a fresh session. Live feeds are not auto-enabled
-       until the visitor asks; shared links skip this surface entirely. It returns
-       every session until "Don't show this again" is ticked — see
-       src/firstRunExperience.js for the full show policy. -->
-  <aside id="first-run-launcher" role="dialog" aria-labelledby="first-run-title" aria-describedby="first-run-description" hidden>
+  <!-- Suppressed first-run launcher -->
+  <aside id="first-run-launcher" role="dialog" aria-labelledby="first-run-title" aria-describedby="first-run-description" hidden style="display: none !important;">
     <div class="first-run-scanline" aria-hidden="true"></div>
     <header class="first-run-header">
       <span class="first-run-kicker">MISSION CONTROL · FIRST LAUNCH</span>

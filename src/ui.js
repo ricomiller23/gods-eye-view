@@ -389,7 +389,7 @@ const GLOBAL_POST_DEFAULTS = {
   bloom: { enabled: false, intensity: BLOOM_INTENSITY_DEFAULT },
   sharpen: { enabled: true, intensity: 49 },
   hudVariant: 'tactical',
-  hudVisible: true,
+  hudVisible: false,
   // Detection is ON for EVERY style on a first run, Normal included (owner
   // directive 2026-08-22: "detect should also be on by default"). It is the
   // same preset object the military styles and Contacts already apply, so there
@@ -7760,6 +7760,7 @@ export class StyleManager {
       reconsiderAutoCollapse: this._leftPanelStack?.contains(panelEl) === true,
     });
     this._syncLeftRailTabHighlights?.();
+    this._syncRightRailTabHighlights?.();
     if (syncShare) this.shareLinkManager?.onPanelStateChange?.();
   }
 
@@ -9684,11 +9685,21 @@ export class StyleManager {
       document.getElementById('tab-btn-scenes')?.classList.toggle('active', Boolean(isScene));
     };
 
-    // Right Rail toggle button & tab
+    // Right Rail toggle button & tabs (DISPLAY, INTEL)
     const rightToggleBtn = document.getElementById('right-rail-toggle-btn');
+    const rightDisplayBtn = document.getElementById('right-rail-display-btn');
     const rightOpenBtn = document.getElementById('right-rail-open-btn');
     const rightRail = document.getElementById('right-context-rail');
     const rightRailTabs = document.getElementById('right-rail-tabs');
+
+    this._syncRightRailTabHighlights = () => {
+      const ppPanel = document.getElementById('pp-toggles');
+      const ctxPanel = document.getElementById('global-context-panel');
+      const isDisplay = ppPanel && !ppPanel.classList.contains('collapsed') && !this._rightRailSlidOut;
+      const isIntel = ctxPanel && !ctxPanel.classList.contains('collapsed') && !this._rightRailSlidOut;
+      rightDisplayBtn?.classList.toggle('active', Boolean(isDisplay));
+      rightOpenBtn?.classList.toggle('active', Boolean(isIntel));
+    };
 
     this._setRightRailSlidOut = (slidOut) => {
       this._rightRailSlidOut = Boolean(slidOut);
@@ -9698,15 +9709,38 @@ export class StyleManager {
         rightToggleBtn.title = this._rightRailSlidOut ? 'Open context rail (])' : 'Slide context rail in/out (])';
         rightToggleBtn.setAttribute('aria-expanded', String(!this._rightRailSlidOut));
       }
+      this._syncRightRailTabHighlights();
     };
 
     rightToggleBtn?.addEventListener('click', (e) => {
       e.stopPropagation();
       this._setRightRailSlidOut(!this._rightRailSlidOut);
     });
+    rightDisplayBtn?.addEventListener('click', () => {
+      const ppPanel = document.getElementById('pp-toggles');
+      const isExpanded = ppPanel && !ppPanel.classList.contains('collapsed');
+      if (this._rightRailSlidOut) {
+        this._setRightRailSlidOut(false);
+        this.setPanelCollapsed('pp-toggles', false, { explicit: true });
+      } else if (isExpanded) {
+        this.setPanelCollapsed('pp-toggles', true, { explicit: true });
+      } else {
+        this.setPanelCollapsed('pp-toggles', false, { explicit: true });
+      }
+      this._syncRightRailTabHighlights();
+    });
     rightOpenBtn?.addEventListener('click', () => {
-      this._setRightRailSlidOut(false);
-      this.setPanelCollapsed('global-context-panel', false, { explicit: true });
+      const ctxPanel = document.getElementById('global-context-panel');
+      const isExpanded = ctxPanel && !ctxPanel.classList.contains('collapsed');
+      if (this._rightRailSlidOut) {
+        this._setRightRailSlidOut(false);
+        this.setPanelCollapsed('global-context-panel', false, { explicit: true });
+      } else if (isExpanded) {
+        this.setPanelCollapsed('global-context-panel', true, { explicit: true });
+      } else {
+        this.setPanelCollapsed('global-context-panel', false, { explicit: true });
+      }
+      this._syncRightRailTabHighlights();
     });
 
     // Bottom Command Dock slide toggle & pull tab
@@ -9736,6 +9770,7 @@ export class StyleManager {
     });
 
     this._syncLeftRailTabHighlights();
+    this._syncRightRailTabHighlights();
   }
 
   /**

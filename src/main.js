@@ -1,6 +1,6 @@
 import * as Cesium from 'cesium';
 import { StyleManager } from './ui.js';
-import { flyToAustin } from './camera.js';
+import { flyToAustin, flyToUserLocation } from './camera.js';
 import { DataLayerManager } from './data/manager.js';
 import flightsLayer from './data/flights.js';
 import militaryFlightsLayer from './data/militaryFlights.js';
@@ -30,7 +30,7 @@ import {
   holdContinuousRender,
   releaseContinuousRender,
 } from './renderGovernor.js';
-import { installScopeMask } from './scopeMask.js';
+import { installScopeMask, setScopeMaskEnabled } from './scopeMask.js';
 import { initFirstRunExperience } from './firstRunExperience.js';
 
 initLogoGaze();
@@ -198,10 +198,21 @@ async function init() {
     const weatherEffects = null;
     const cockpitCloudEffects = initCockpitCloudEffects(viewer);
 
-    // If no share link state, do default fly-to Austin
+    // Clear stale Austin hash from prior sessions if present
+    if (typeof window !== 'undefined' && window.location.hash) {
+      if (window.location.hash.includes('30.2672') && window.location.hash.includes('-97.7431')) {
+        try {
+          history.replaceState(null, '', window.location.pathname + window.location.search);
+        } catch {}
+      }
+    }
+
+    // If no share link state, acquire user location and fly to user
     if (!styleManager.hasShareState) {
-      loaderStatus.textContent = 'Flying to Austin, TX...';
-      flyToAustin(viewer);
+      loaderStatus.textContent = 'Acquiring satellite lock & user location...';
+      flyToUserLocation(viewer, (statusText) => {
+        if (loaderStatus) loaderStatus.textContent = statusText;
+      });
     } else {
       loaderStatus.textContent = 'Restoring shared view...';
     }
@@ -261,6 +272,12 @@ async function init() {
       const revealFirstRun = () => {
         if (firstRunRevealed) return;
         firstRunRevealed = true;
+        // Suppress first-run launcher so user enters clean intuitive UI immediately
+        try {
+          localStorage.setItem('gev:first-run-mission:v1', 'suppressed');
+          sessionStorage.setItem('gev:first-run-mission-session:v1', 'dismissed');
+          document.getElementById('first-run-launcher')?.remove();
+        } catch {}
         // dataManager is passed explicitly: the globe missions enable bundled
         // keyless layers through it, and reaching for styleManager._dataManager
         // would make a private field part of this feature's contract.
@@ -276,10 +293,9 @@ async function init() {
     // its chance to register pre-install holds. (perf wave 2)
     installRenderGovernor(viewer);
 
-    // The explicit scope mask replaces the emergent six-pass artifact —
-    // see src/scopeMask.js. Installed before the UI so the DISPLAY-rail
-    // toggle finds it live.
+    // Install scope mask but keep it disabled by default for big edge-to-edge visuals
     installScopeMask(viewer);
+    setScopeMaskEnabled(false);
 
     // The follow camera recomputes the tracked target's dead-reckon position
     // every frame — tracking anything is a per-frame animation. (perf wave 2)

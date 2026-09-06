@@ -68,7 +68,7 @@ export class IntelHUD {
   constructor(viewer) {
     this.viewer = viewer;
     this._visible = false;
-    this._autoMode = true; // auto show/hide based on style
+    this._autoMode = false; // default off for clean visually compelling visuals
     this._currentStyle = 'normal';
     this._el = null;
     this._variant = 'tactical';

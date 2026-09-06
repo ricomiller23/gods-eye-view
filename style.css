@@ -86,12 +86,9 @@ html, body {
   inset: 0;
   width: 100%;
   height: 100%;
-  /* z1 like the celestial ring; the ring is appended LATER so DOM order
-     keeps it ABOVE the mask — matching the old stacking, where the DOM
-     ring rode above the in-scene scope artifact. Detection (z5) and the
-     overlay root (z6) stay above both. */
   z-index: 1;
-  pointer-events: none;
+  pointer-events: none !important;
+  display: none !important;
 }
 
 /* The detection surface is host-owned but parented into #cesiumContainer
@@ -6690,8 +6687,13 @@ body.cockpit-mode #intel-hud .hud-right-edge { right: 22px; }
 
 #data-panel.collapsed,
 #cctv-panel.collapsed,
-#scene-panel.collapsed {
-  width: var(--left-collapsed-width);
+#scene-panel.collapsed,
+#left-panel-stack > [data-panel-id].collapsed,
+#pp-toggles.collapsed,
+#right-context-rail > #pp-toggles.collapsed,
+#global-context-panel.collapsed,
+#right-context-rail > #global-context-panel.collapsed {
+  display: none !important;
 }
 
 #global-context-panel #radio-panel.collapsed { width: 100%; }
@@ -8856,10 +8858,6 @@ body:not(.ui-clean-view):not(.recording-mode):has(#intel-hud[data-variant='minim
   top: 50%;
   left: 50%;
   width: min(34rem, calc(100vw - 2rem));
-  /* Five tiles do not fit a short landscape phone (667 x 390), where the card
-     would otherwise render past BOTH ends of the viewport. Cap it to the
-     viewport and let the mission list scroll inside — the heading, the checkbox
-     and the status line must stay reachable at every height. */
   max-height: calc(100vh - 1.5rem);
   max-height: calc(100dvh - 1.5rem);
   display: flex;
@@ -8881,15 +8879,9 @@ body:not(.ui-clean-view):not(.recording-mode):has(#intel-hud[data-variant='minim
   opacity: 0;
   transform: translate(-50%, calc(-50% + 0.8rem)) scale(0.985);
   transition: opacity 220ms ease, transform 280ms cubic-bezier(0.2, 0.8, 0.2, 1);
-  /* Inert until revealed AND again while fading out, so a click during the
-     dismiss animation cannot launch a second mission behind the fade. */
   pointer-events: none;
 }
 
-/* An AUTHOR `display` on this id beats the UA's `[hidden] { display: none }` in
-   the cascade, so the flex above would otherwise leave the card in the
-   accessibility tree from page parse until it is revealed — or, on a share
-   link, until it is removed. Restore the attribute's meaning explicitly. */
 #first-run-launcher[hidden] {
   display: none;
 }
@@ -8898,6 +8890,15 @@ body:not(.ui-clean-view):not(.recording-mode):has(#intel-hud[data-variant='minim
   opacity: 1;
   transform: translate(-50%, -50%) scale(1);
   pointer-events: auto;
+}
+
+/* Suppressed in PROJECT CHARLIE TUNA: full clean edge-to-edge UI */
+#first-run-launcher,
+#first-run-launcher.visible {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
 }
 
 .first-run-scanline {
@@ -9311,7 +9312,9 @@ body.scene-playback-mode #first-run-launcher {
   top: var(--right-stack-safe-top, 26vh);
   right: 10px;
   z-index: 105;
-  display: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   padding: 6px 4px;
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
@@ -9322,12 +9325,11 @@ body.scene-playback-mode #first-run-launcher {
   backdrop-filter: blur(24px) saturate(1.4);
   -webkit-backdrop-filter: blur(24px) saturate(1.4);
   pointer-events: auto;
-  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1), opacity 240ms ease;
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1), opacity 240ms ease, border-color var(--transition-fast);
 }
 
-#right-context-rail.rail-slid-out ~ #right-rail-tabs,
-#right-rail-tabs.rail-slid-out {
-  display: flex;
+#right-rail-tabs:hover {
+  border-color: var(--glass-border-hover);
 }
 
 /* Bottom Command Dock slide transitions */
