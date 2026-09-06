@@ -1,5 +1,5 @@
 /**
- * Vercel Serverless Function Proxy Gateway for God's Eye View V1
+ * Vercel Serverless Function Proxy Gateway for PROJECT CHARLIE TUNA
  * Route: /api/*
  */
 
@@ -309,7 +309,7 @@ NAVSTAR 62 (PRN 25)
 
     // 8. Overpass OpenStreetMap Queries
     if (pathname.startsWith('/overpass')) {
-      return res.status(200).json({ version: 0.6, generator: 'GodsEyeProxy', elements: [] });
+      return res.status(200).json({ version: 0.6, generator: 'ProjectCharlieTunaProxy', elements: [] });
     }
 
     // 9. CCTV Camera Feeds
@@ -331,7 +331,7 @@ NAVSTAR 62 (PRN 25)
     }
 
     // Default Fallback Response
-    return res.status(200).json({ ok: true, message: 'Gods Eye View API Gateway', path: pathname });
+    return res.status(200).json({ ok: true, message: 'PROJECT CHARLIE TUNA API Gateway', path: pathname });
   } catch (error) {
     console.error('[Vercel API Proxy Error]:', error);
     return res.status(200).json({ ok: false, error: error.message });

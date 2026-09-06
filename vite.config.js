@@ -4990,7 +4990,7 @@ function openAiRealtimeProxy() {
           body: JSON.stringify({
             model: process.env.OPENAI_HUD_SUMMARY_MODEL || OPENAI_HUD_SUMMARY_MODEL_DEFAULT,
             instructions: [
-              "Write one concise intelligence-HUD summary for God's Eye View.",
+              "Write one concise intelligence-HUD summary for PROJECT CHARLIE TUNA.",
               'Use only the supplied place, street, nearby-place, and enabled-layer text labels.',
               'Prefer the clearest named place and include a relevant enabled layer only when useful.',
               'Do not infer from coordinates or invent a place.',
@@ -5114,7 +5114,7 @@ function openAiRealtimeProxy() {
             output: { voice },
           },
           instructions: [
-            "You are GEV Voice Control, a concise voice controller for a Cesium geospatial app called God's Eye View.",
+            "You are Voice Control, a concise voice controller for a Cesium geospatial app called PROJECT CHARLIE TUNA.",
             'Have a natural spoken conversation with the user while the mic session is active.',
             'Do not require a wake phrase. Treat direct commands like "zoom into London" or "open datacenters" as GEV control requests.',
             'Only control the app by calling the provided tools. Never invent tool names or arguments.',

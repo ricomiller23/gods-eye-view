@@ -328,7 +328,7 @@ export async function geocodeViaNominatim(query) {
   try {
     const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=1`;
     const response = await fetch(url, {
-      headers: { 'User-Agent': 'GodsEyeView/1.0' },
+      headers: { 'User-Agent': 'ProjectCharlieTuna/1.0' },
       signal: AbortSignal.timeout(6000),
     });
     if (!response.ok) return null;
