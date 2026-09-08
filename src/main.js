@@ -32,6 +32,7 @@ import {
 } from './renderGovernor.js';
 import { installScopeMask, setScopeMaskEnabled } from './scopeMask.js';
 import { initFirstRunExperience } from './firstRunExperience.js';
+import { isMobileDevice } from './device.js';
 
 initLogoGaze();
 
@@ -89,6 +90,8 @@ async function init() {
     // Expose API key globally for geocoding in locations.js
     window.__GOOGLE_MAPS_API_KEY__ = googleApiKey;
 
+    const isMobile = isMobileDevice();
+
     // Create the Cesium viewer with minimal chrome
     const viewer = new Cesium.Viewer('cesiumContainer', {
       timeline: false,
@@ -116,22 +119,44 @@ async function init() {
         document.body.appendChild(el);
         return el;
       })(),
-      msaaSamples: 4,
+      msaaSamples: isMobile ? 1 : 4,
       contextOptions: {
         webgl: {
-          preserveDrawingBuffer: true,
+          preserveDrawingBuffer: !isMobile,
+          powerPreference: 'high-performance',
+          failIfMajorPerformanceCaveat: false,
         },
       },
     });
 
-    // Cap the default render loop at 60 fps. Cesium's loop otherwise runs at
-    // the display's refresh rate — 120 Hz on ProMotion panels — doubling GPU
-    // and CPU burn for zero visual benefit in a map app whose animation
-    // cadences (poll interpolation, trail fades, style crossfades) are all
-    // designed against wall-clock time, not frame count. Measured on the
-    // 2026-08-05 perf investigation as a strict halving of idle burn on
-    // 120 Hz hardware; a no-op on 60 Hz displays. (perf item 2)
-    viewer.targetFrameRate = 60;
+    if (isMobile) {
+      // On mobile Retina displays (DPR 2.0 - 3.0), rendering at full 3x allocates
+      // multi-megabyte framebuffers and exceeds iOS WebKit memory limits.
+      // Capping effective DPR at ~1.25 maintains high visual clarity
+      // while cutting framebuffer and texture memory by >70%.
+      const dpr = typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1;
+      viewer.resolutionScale = Math.min(1.0, 1.25 / dpr);
+      viewer.targetFrameRate = 30;
+      if (viewer.canvas) {
+        viewer.canvas.addEventListener('webglcontextlost', (event) => {
+          event.preventDefault();
+          console.warn('[WebGL] Context lost on mobile. Preventing crash and waiting for restore...');
+        }, false);
+        viewer.canvas.addEventListener('webglcontextrestored', () => {
+          console.log('[WebGL] Context restored.');
+          viewer.scene?.requestRender?.();
+        }, false);
+      }
+    } else {
+      // Cap the default render loop at 60 fps. Cesium's loop otherwise runs at
+      // the display's refresh rate — 120 Hz on ProMotion panels — doubling GPU
+      // and CPU burn for zero visual benefit in a map app whose animation
+      // cadences (poll interpolation, trail fades, style crossfades) are all
+      // designed against wall-clock time, not frame count. Measured on the
+      // 2026-08-05 perf investigation as a strict halving of idle burn on
+      // 120 Hz hardware; a no-op on 60 Hz displays. (perf item 2)
+      viewer.targetFrameRate = 60;
+    }
 
     // Register per-layer data attribution into the "Data attribution" popover.
     // Required by each source's license (ODbL, CC BY-NC-SA, NASA FIRMS, etc.);
@@ -160,6 +185,22 @@ async function init() {
       tileset = await Cesium.createGooglePhotorealistic3DTileset({
         onlyUsingWithGoogleGeocoder: true,
       });
+
+      if (isMobile) {
+        // Mobile memory guard: cap GPU tile memory cache and tune LOD
+        // to prevent iOS WebProcess Jetsam termination (1GB threshold).
+        tileset.maximumMemoryUsage = 128;
+        tileset.maximumScreenSpaceError = 24;
+        tileset.foveatedScreenSpaceError = true;
+        tileset.foveatedTimeDelay = 0.1;
+        tileset.foveatedConeSize = 0.25;
+        tileset.progressiveResolutionHeightFraction = 0.3;
+        tileset.preloadAncestors = false;
+        tileset.preloadFlightDestinations = false;
+      } else {
+        tileset.maximumMemoryUsage = 512;
+      }
+
       viewer.scene.primitives.add(tileset);
       // NOTE: Cesium World Terrain intentionally disabled — conflicts with Google 3D Tiles at high zoom.
       // Google Photorealistic 3D Tiles provide their own terrain/elevation.

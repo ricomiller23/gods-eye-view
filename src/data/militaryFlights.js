@@ -1,4 +1,5 @@
 import * as Cesium from 'cesium';
+import { isMobileDevice } from '../device.js';
 import { aircraftIncludedInNearby } from './aircraftNearbyPolicy.js';
 import { registerPickOwner, unregisterPickOwner, isOwnedByOtherLayer, resolvePickId } from './pickRegistry.js';
 import { registerSpriteCollection, restoreSpriteOrder } from './spriteOrder.js';
@@ -144,6 +145,7 @@ const MODEL_SCALE = 1;
 // and All aren't identical when few planes are in range; on-screen planes win the cap (see flights.js).
 const MODEL_MAX = 150;          // 'proximity' cap
 const MODEL_MAX_ALL = 350;      // 'all' cap
+const MODEL_MOBILE_MAX = 20;     // mobile cap: bounds concurrent glTF allocations below iOS Jetsam limit
 const MODEL_PROX_ADD_M  = 150000;  // proximity: model NEW planes within 150 km
 const MODEL_PROX_KEEP_M = 185000;  // proximity: KEEP modeled planes out to 185 km
 
@@ -1405,7 +1407,9 @@ function _syncTracked2dRotation() {
  *  SAME value, else 'all' (MODEL_MAX_ALL) marks planes eligible that _ensureModel refuses at the
  *  lower MODEL_MAX, silently degrading 'all' to 'proximity'. */
 function _modelCap() {
-  const mapCap = _models3dMode === 'all' ? MODEL_MAX_ALL : MODEL_MAX;
+  const isMobile = isMobileDevice();
+  const baseCap = _models3dMode === 'all' ? MODEL_MAX_ALL : MODEL_MAX;
+  const mapCap = isMobile ? Math.min(MODEL_MOBILE_MAX, baseCap) : baseCap;
   // `Math.min` on purpose: cockpit may only ever LOWER the GLB budget.
   return _cockpitContactMode ? Math.min(COCKPIT_MODEL_MAX, mapCap) : mapCap;
 }

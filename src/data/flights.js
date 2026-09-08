@@ -20,6 +20,7 @@
  * looking at (product rule 2026-07-02).
  */
 import * as Cesium from 'cesium';
+import { isMobileDevice } from '../device.js';
 import { aircraftIncludedInNearby } from './aircraftNearbyPolicy.js';
 import { registerPickOwner, unregisterPickOwner, isOwnedByOtherLayer, resolvePickId } from './pickRegistry.js';
 import {
@@ -163,6 +164,7 @@ const MODEL_SCALE = 1;          // airplane.glb is transform-applied and baked t
 // Per-mode caps. Each model is its own draw call (no instancing yet), so these bound the frame cost.
 const MODEL_MAX = 150;          // 'proximity' cap (the planes immediately around you)
 const MODEL_MAX_ALL = 350;      // 'all' cap (everything out to ~the horizon)
+const MODEL_MOBILE_MAX = 20;     // mobile cap: bounds concurrent glTF allocations below iOS Jetsam limit
 // Per-mode ADD / KEEP radii. The two modes differ by RADIUS, not just cap — otherwise they look
 // IDENTICAL whenever fewer than a cap's worth of planes are in range (field bug: Proximity and All
 // rendered the same). 'proximity' = a tight ring; 'all' = roughly to the horizon (state-scale). Each
@@ -1634,7 +1636,9 @@ function _syncTracked2dRotation() {
  *  SAME value, else 'all' (MODEL_MAX_ALL) would mark planes eligible that _ensureModel then refuses
  *  at the lower MODEL_MAX, silently degrading 'all' to 'proximity'. */
 function _modelCap() {
-  const mapCap = _models3dMode === 'all' ? MODEL_MAX_ALL : MODEL_MAX;
+  const isMobile = isMobileDevice();
+  const baseCap = _models3dMode === 'all' ? MODEL_MAX_ALL : MODEL_MAX;
+  const mapCap = isMobile ? Math.min(MODEL_MOBILE_MAX, baseCap) : baseCap;
   // `Math.min` on purpose: cockpit may only ever LOWER the GLB budget. Cockpit is
   // already the heaviest mode (20 Hz camera setView ahead of scene update, photoreal
   // retraversal, the cloud pass) and every model is its own draw call.

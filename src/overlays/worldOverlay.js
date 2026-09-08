@@ -5,6 +5,7 @@ import {
   keyholeLabelAlphaFromGeometry,
 } from '../celestialRing.js';
 import { BoundedCohort, stableIdentityHash } from '../data/detectionCohort.js';
+import { isMobileDevice } from '../device.js';
 import { LabelArbiter, LABEL_ARBITER_TIMING } from '../data/labelArbiter.js';
 import {
   altitudeFade,
@@ -1106,7 +1107,8 @@ function ensureCanvasSize() {
   if (!_canvas || !_viewer?.canvas) return false;
   const width = Math.max(0, Math.round(Number(_viewer.canvas.clientWidth) || 0));
   const height = Math.max(0, Math.round(Number(_viewer.canvas.clientHeight) || 0));
-  const dpr = Math.max(1, Number(globalThis.window?.devicePixelRatio) || 1);
+  const rawDpr = Math.max(1, Number(globalThis.window?.devicePixelRatio) || 1);
+  const dpr = isMobileDevice() ? Math.min(1.5, rawDpr) : rawDpr;
   const changed = _canvas.width !== Math.round(width * dpr)
     || _canvas.height !== Math.round(height * dpr)
     || _detectionSurface?.width !== Math.round(width * dpr)
