@@ -4086,7 +4086,7 @@ const flightsLayer = {
       : resourceController.signal;
     try {
       updateSignal.throwIfAborted();
-      const response = await fetch(_flightApiUrl(viewer || _viewer), { signal: updateSignal });
+      const response = await fetch(_flightApiUrl(viewer || _viewer), { signal: updateSignal, cache: 'no-store' });
       _lastStatus = response.status;
       const responseSource = response.headers.get('x-flight-source');
       const responseCoverage = response.headers.get('x-flight-coverage');

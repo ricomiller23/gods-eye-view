@@ -2789,7 +2789,7 @@ const militaryFlightsLayer = {
       : resourceController.signal;
     try {
       updateSignal.throwIfAborted();
-      const response = await fetch(API_URL, { signal: updateSignal });
+      const response = await fetch(API_URL, { signal: updateSignal, cache: 'no-store' });
       _lastStatus = response.status;
 
       if (!response.ok) {

@@ -1093,7 +1093,7 @@ async function _loadDenseCatalog({ signal = null } = {}) {
   _notifyRowControls();
   try {
     loadSignal.throwIfAborted();
-    const res = await fetch(`/api/celestrak/${DENSE_GROUP_PATH}`, { signal: loadSignal });
+    const res = await fetch(`/api/celestrak/${DENSE_GROUP_PATH}`, { signal: loadSignal, cache: 'no-store' });
     if (!res.ok) {
       console.warn(`[Data:Satellites] Dense group '${DENSE_GROUP_PATH}' fetch failed (${res.status})`);
       _denseLoadFailed(token, `feed unavailable (${res.status})`);
@@ -1632,7 +1632,7 @@ const satellitesLayer = {
       // gracefully (parseTLE of an upstream error body yields []).
       const results = await Promise.all(CATALOG_GROUPS.map(async (groupDef) => {
         try {
-          const res = await fetch(`/api/celestrak/${groupDef.path}`, { signal: updateSignal });
+          const res = await fetch(`/api/celestrak/${groupDef.path}`, { signal: updateSignal, cache: 'no-store' });
           if (!res.ok) return { ...groupDef, entries: [], ok: false };
           const entries = parseTLE(await res.text());
           updateSignal.throwIfAborted();
