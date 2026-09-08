@@ -7375,9 +7375,20 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.CESIUM_ION_TOKEN': JSON.stringify(env.CESIUM_ION_TOKEN),
     },
     build: {
-      // The Cesium engine bundle is inherently large; raise the warning ceiling
-      // so the build log isn't dominated by an expected chunk-size notice.
-      chunkSizeWarningLimit: 1500,
+      // Accommodate lazy-loaded geospatial datasets (EGM96 geoid grid ~2.77 MB, Natural Earth regions ~1.98 MB)
+      // which are intentionally code-split and loaded on demand.
+      chunkSizeWarningLimit: 3000,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('satellite.js') || id.includes('mgrs') || id.includes('@mapbox') || id.includes('pbf')) {
+                return 'geospatial-vendor';
+              }
+            }
+          },
+        },
+      },
     },
   };
 });
